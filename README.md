@@ -8,7 +8,7 @@ liberadas automaticamente.
 | | |
 | :--- | :--- |
 | **Versão atual** | `v2.0` (N2) — [o que mudou](docs/melhorias-n2.md) |
-| **Repositório** | [nnegherbon/Locky-V2---Melhoria-de-software](https://github.com/nnegherbon/Locky-V2---Melhoria-de-software) · origem N1: [mari-catolicasc/locky](https://github.com/mari-catolicasc/locky) |
+| **Repositório** | [ruanplp123/Manutencao-e-melhoria](https://github.com/ruanplp123/Manutencao-e-melhoria) · origem N1: [mari-catolicasc/locky](https://github.com/mari-catolicasc/locky) |
 | **Backend** | Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL 16 · JWT |
 | **Frontend** | React 19 · TypeScript · Vite · React Router · Axios |
 | **Publicação** | Vercel (frontend + API serverless) + Neon PostgreSQL — [guia de deploy](docs/deploy-vercel.md) |
