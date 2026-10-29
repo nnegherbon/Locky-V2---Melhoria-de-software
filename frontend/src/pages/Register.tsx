@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { getErrorMessage } from '../services/api'
 import './Register.css'
 
 function Register() {
   const navigate = useNavigate()
+  const { register } = useAuth()
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -14,7 +17,7 @@ function Register() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
 
@@ -35,16 +38,14 @@ function Register() {
 
     setLoading(true)
 
-    setTimeout(() => {
-      console.log({
-        name,
-        email,
-        password,
-      })
-
+    try {
+      await register(name.trim(), email.trim(), password)
+      navigate('/dashboard')
+    } catch (err) {
+      setError(getErrorMessage(err, 'Não foi possível criar sua conta. Tente novamente.'))
+    } finally {
       setLoading(false)
-      navigate('/login')
-    }, 1000)
+    }
   }
 
   return (

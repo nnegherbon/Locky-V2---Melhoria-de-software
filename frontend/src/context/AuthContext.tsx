@@ -1,6 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { getCurrentUser, login as loginRequest } from '../services/authService'
+import {
+  getCurrentUser,
+  login as loginRequest,
+  register as registerRequest,
+} from '../services/authService'
 import { clearToken, getToken, setToken } from '../services/tokenStorage'
 import type { User } from '../types/user'
 
@@ -8,6 +12,7 @@ type AuthContextValue = {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
 }
 
@@ -35,13 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(me)
   }
 
+  async function register(name: string, email: string, password: string) {
+    await registerRequest(name, email, password)
+    await login(email, password)
+  }
+
   function logout() {
     clearToken()
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

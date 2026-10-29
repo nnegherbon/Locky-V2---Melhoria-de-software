@@ -2,6 +2,10 @@ class CredenciaisInvalidasError(Exception):
     """Credenciais de login inválidas ou token não autenticável."""
 
 
+class EmailJaCadastradoError(Exception):
+    """Já existe um usuário cadastrado com o e-mail informado."""
+
+
 class ArmarioNaoEncontradoError(Exception):
     """Armário referenciado não existe."""
 

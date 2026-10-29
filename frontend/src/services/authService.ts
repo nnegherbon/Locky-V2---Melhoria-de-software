@@ -15,3 +15,8 @@ export async function getCurrentUser(): Promise<User> {
   const { data } = await api.get<User>('/auth/me')
   return data
 }
+
+export async function register(name: string, email: string, password: string): Promise<User> {
+  const { data } = await api.post<User>('/auth/register', { name, email, password })
+  return data
+}

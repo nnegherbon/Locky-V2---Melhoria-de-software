@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 120
     tempo_maximo_reserva_minutos: int = 120
     expiracao_intervalo_minutos: int = 5
+    seed_admin_email: str = "admin@locky.com"
+    seed_admin_password: str = "admin123"
 
 
 settings = Settings()
