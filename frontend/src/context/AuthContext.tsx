@@ -5,12 +5,14 @@ import {
   login as loginRequest,
   register as registerRequest,
 } from '../services/authService'
+import { setUnauthorizedHandler } from '../services/api'
 import { clearToken, getToken, setToken } from '../services/tokenStorage'
 import type { User } from '../types/user'
 
 type AuthContextValue = {
   user: User | null
   loading: boolean
+  sessionExpired: boolean
   login: (email: string, password: string) => Promise<void>
   register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
@@ -21,6 +23,17 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(() => Boolean(getToken()))
+  const [sessionExpired, setSessionExpired] = useState(false)
+
+  useEffect(() => {
+    // Token expirou durante o uso: derruba a sessão e o ProtectedRoute
+    // redireciona para o login, que mostra o aviso.
+    setUnauthorizedHandler(() => {
+      setUser(null)
+      setSessionExpired(true)
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   useEffect(() => {
     if (!getToken()) {
@@ -37,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { access_token } = await loginRequest(email, password)
     setToken(access_token)
     const me = await getCurrentUser()
+    setSessionExpired(false)
     setUser(me)
   }
 
@@ -47,11 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function logout() {
     clearToken()
+    setSessionExpired(false)
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, sessionExpired, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   )

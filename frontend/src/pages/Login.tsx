@@ -7,7 +7,7 @@ import './Login.css'
 
 function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, sessionExpired } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -114,6 +114,12 @@ function Login() {
                 </button>
               </div>
             </div>
+
+            {sessionExpired && !error && (
+              <p className="login-error">
+                Sua sessão expirou. Entre novamente para continuar.
+              </p>
+            )}
 
             {error && (
               <p className="login-error">

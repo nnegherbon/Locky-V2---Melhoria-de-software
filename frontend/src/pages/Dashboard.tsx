@@ -55,7 +55,9 @@ function Dashboard() {
         <article className="stat-card">
           <span>Total de armários</span>
           <strong>{stats?.total ?? '—'}</strong>
-          <small>Todos os armários</small>
+          <small>
+            {stats ? `${stats.maintenance} em manutenção` : 'Todos os armários'}
+          </small>
         </article>
 
         <article className="stat-card stat-highlight">
