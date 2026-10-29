@@ -1,127 +1,132 @@
-# Relatório Formal de Handoff - Projeto Locky (N1)
+# Relatório Formal de Handoff - Projeto Locky (N2)
 
-## 1. Identificação do Projeto e Equipe
+## 1. Identificação
 
-- **Nome do Projeto**: Locky (Sistema de Gestão e Reserva de Armários de Academia)
-- **Equipe**: Cartel / Locky Team
-- **Product Owner (PO)**: Leonardo Lima
-- **Scrum Master / Repo Admin**: Mariana
-- **Backend Developers**: Miguel Dufloth
-- **Frontend Developers**: Lucas Honorato
-- **QA (Quality Assurance)**: Ana Júlia
-- **Documentação / Apoio**: Miguel Huertas
-- **Repositório GitHub**: [https://github.com/mari-catolicasc/locky](https://github.com/mari-catolicasc/locky)
-- **Versão Entregue**: `v1.0` (Release N1)
+- **Projeto**: Locky (Sistema de Gestão e Reserva de Armários de Academia)
+- **Repositório**: [github.com/mari-catolicasc/locky](https://github.com/mari-catolicasc/locky)
+- **Versão entregue**: `v2.0` (N2) · versão anterior: `1.0.0` (N1)
 
----
+| Fase | Equipe | PO |
+| :--- | :--- | :--- |
+| N1 (origem) | Cartel / Locky Team | Leonardo Lima |
+| N2 (receptora) | **[nome da equipe]** | **[nome do PO]** |
 
-## 2. Visão Geral da Arquitetura
-
-O sistema **Locky** adota uma arquitetura em camadas totalmente desacoplada (Decoupled Full-Stack Architecture):
-
-```
-+-------------------------------------------------------+
-|                Frontend (React + Vite)                |
-|  - TypeScript, React Router, Context API (AuthContext)|
-+-------------------------------------------------------+
-                           |
-                     HTTP REST / JSON
-                           v
-+-------------------------------------------------------+
-|             Backend (FastAPI - Python 3.12)           |
-|  - Routers (Auth, Lockers, Reservations, Health)      |
-|  - Services (Regras de negócio, Validações)           |
-|  - Repositories & SQLAlchemy ORM                      |
-|  - Scheduler Background (APScheduler)                 |
-+-------------------------------------------------------+
-                           |
-                           v
-+-------------------------------------------------------+
-|              Banco de Dados (SQLite / PostgreSQL)     |
-|  - Migrations controladas via Alembic                 |
-+-------------------------------------------------------+
-```
+A matriz de papéis e o histórico de contribuições de cada fase estão no
+[README](../README.md).
 
 ---
 
-## 3. Instruções de Instalação e Execução Local
+## 2. Parecer de recepção da N2 (sobre o que recebemos da N1)
 
-### 3.1. Pré-requisitos
-- Python 3.12+ (ou gerenciador `uv`)
-- Node.js 18+ e npm
+**Viável, com correções obrigatórias.** O backend era sólido (camadas bem separadas,
+100% de cobertura, concorrência tratada), mas o sistema **não funcionava de ponta a
+ponta** em uma instalação nova:
 
-### 3.2. Configurando o Backend
+- não havia como criar usuários (sem cadastro na API e sem seed);
+- as telas de Cadastro e de Administração eram simuladas no frontend;
+- a documentação descrevia banco, rotas, porta e esquema diferentes dos reais.
+
+O diagnóstico completo, as decisões e a justificativa de cada mudança estão em
+[`melhorias-n2.md`](melhorias-n2.md).
+
+---
+
+## 3. Arquitetura
+
+```
+Frontend (React 19 + TypeScript + Vite)          :5173
+  pages/ → services/ (Axios) → context/AuthContext
+                    │  HTTP REST / JSON, Bearer JWT
+                    ▼
+Backend (FastAPI, Python 3.12)                   :8080
+  api/ (rotas, autenticação e autorização)
+   → services/ (regras de negócio)
+   → repositories/ (consultas SQLAlchemy)
+   → models/ (ORM)
+  core/scheduler.py: APScheduler expira reservas vencidas
+                    │
+                    ▼
+PostgreSQL 16 (docker compose)                   :5432 (dev) / :5433 (testes)
+  migrations versionadas com Alembic
+```
+
+---
+
+## 4. Como executar do zero
+
+Pré-requisitos: Python 3.12, [uv](https://docs.astral.sh/uv/), Docker, Node.js 22.
+
 ```bash
+# Backend
 cd backend
-python -m venv .venv
-# Ativar venv:
-# Windows (PowerShell): .venv\Scripts\Activate.ps1
-# Linux/macOS: source .venv/bin/activate
+uv sync
+cp .env.example .env
+docker compose up -d db
+uv run alembic upgrade head
+uv run python -m app.seed          # cria admin e 12 armários (idempotente)
+uv run uvicorn app.main:app --reload --port 8080
 
-pip install -r pyproject.toml
-# Executar migrations do banco de dados:
-alembic upgrade head
-
-# Iniciar servidor de desenvolvimento:
-uvicorn app.main:app --reload --port 8000
-```
-- **Documentação Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc UI**: `http://localhost:8000/redoc`
-
-### 3.3. Configurando o Frontend
-```bash
+# Frontend (outro terminal)
 cd frontend
+cp .env.example .env               # VITE_API_URL=http://localhost:8080
 npm install
-npm run dev
+npm run dev                        # http://localhost:5173
 ```
-- Aplicação acessível em `http://localhost:5173`.
+
+**Acesso inicial:** `admin@locky.com` / `admin123` (configurável por
+`SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`). Contas de associado são criadas pela tela
+de cadastro.
+
+**Produção:** defina `ENV=prod` e uma `SECRET_KEY` própria com 32+ bytes. A API se
+recusa a subir com a chave padrão.
 
 ---
 
-## 4. Esteira de Qualidade e Testes
+## 5. Contrato da API
 
-O projeto possui integração contínua configurada via **GitHub Actions**:
-- `.github/workflows/backend-ci.yml`: Executa verificação de sintaxe, formatação e suíte de testes com `pytest`.
-- `.github/workflows/frontend-ci.yml`: Executa verificação de TypeScript e build de produção com Vite.
+Swagger UI em `http://localhost:8080/docs`. O contrato exportado está em
+[`docs/api/openapi.json`](api/openapi.json) e pode ser importado no Postman
+(*Import → File*).
 
-### Executando Testes Localmente:
-```bash
-# No diretório backend/
-pytest -v
-```
-
----
-
-## 5. Contrato de API e Endpoints Principais
-
-A API é auto-documentada no padrão **OpenAPI 3.0** via FastAPI (`http://localhost:8000/docs`).
-
-| Método | Endpoint | Descrição | Autenticação |
+| Método | Endpoint | Descrição | Acesso |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/login` | Autenticação e geração de token JWT | Pública |
-| `GET` | `/api/v1/auth/me` | Dados do usuário logado | Bearer Token |
-| `GET` | `/api/v1/lockers` | Lista armários com paginação e filtros | Bearer Token |
-| `POST` | `/api/v1/reservations` | Cria reserva de armário | Bearer Token |
-| `PATCH` | `/api/v1/reservations/{id}/cancel` | Cancela reserva ativa | Bearer Token |
-| `GET` | `/api/v1/reservations/history` | Histórico de reservas do usuário | Bearer Token |
-| `GET` | `/api/v1/health` | Healthcheck de serviços e banco | Pública |
+| `GET` | `/health` | Verifica se a API está no ar | Público |
+| `POST` | `/auth/register` | Cria conta de associado **(N2)** | Público |
+| `POST` | `/auth/login` | Retorna token JWT | Público |
+| `GET` | `/auth/me` | Dados do usuário logado | Autenticado |
+| `GET` | `/lockers` | Lista armários (filtros `status`, `size`; `limit`/`offset`) | Autenticado |
+| `GET` | `/lockers/stats` | Contagem por status, incluindo `maintenance` **(N2)** | Autenticado |
+| `POST` | `/lockers` | Cadastra armário **(N2)** | Admin |
+| `PATCH` | `/lockers/{id}` | Edita número, tamanho e status disponível/manutenção **(N2)** | Admin |
+| `DELETE` | `/lockers/{id}` | Exclui armário sem histórico **(N2)** | Admin |
+| `POST` | `/reservations` | Cria reserva | Autenticado |
+| `GET` | `/reservations/me` | Reservas do usuário (filtro `status`) | Autenticado |
+| `GET` | `/reservations/me/history` | Histórico paginado com busca e período | Autenticado |
+| `PATCH` | `/reservations/{id}/cancel` | Cancela reserva ativa do próprio usuário | Autenticado |
+
+Erros seguem o formato `{ "detail": "mensagem" }` com 401 (não autenticado),
+403 (sem permissão), 404, 409 (conflito de regra de negócio) e 422 (validação).
 
 ---
 
-## 6. Parecer de Viabilidade de Recepção do Projeto
+## 6. Qualidade
 
-> [!IMPORTANT]
-> **Avaliação de Viabilidade de Transferência (Handoff)**
-> 
-> A equipe receptora que assumir o projeto **Locky** na fase N2 encontrará uma base de código **estável, legível e completamente coberta por testes automatizados**.
-> 
-> **Pontos Fortes**:
-> - Separação clara de responsabilidades no Backend (Router -> Service -> Repository -> Model).
-> - Migrations de banco de dados gerenciadas rigorosamente via Alembic.
-> - Frontend moderno com componentes reutilizáveis, contexto de autenticação e feedback ao usuário.
-> - Esteira de CI pré-configurada passando em todos os PRs.
-> 
-> **Recomendações para a Próxima Equipe**:
-> 1. Iniciar a fase N2 migrando o banco de dados de SQLite para PostgreSQL no ambiente de staging/produção (consulte `docs/debitos-tecnicos.md`).
-> 2. Implementar a renovação silenciosa de tokens (Refresh Token).
-> 3. Expandir o módulo administrativo (painel do admin) para criação e manutenção em lote de armários.
+- **CI (GitHub Actions):** backend roda `ruff check`, `ruff format --check`,
+  `mypy --strict`, migrations e `pytest` com **cobertura mínima de 100%**; frontend
+  roda `eslint` e `tsc + vite build`.
+- **Testes locais:** `cd backend && uv run pytest` (108 testes). O teste de
+  concorrência precisa de `docker compose up -d db_test`; sem ele, é pulado.
+- **Roteiro manual de QA:** seção 5 de [`melhorias-n2.md`](melhorias-n2.md).
+
+---
+
+## 7. Recomendações para a próxima equipe
+
+Em ordem de prioridade (detalhes em [`debitos-tecnicos.md`](debitos-tecnicos.md)):
+
+1. **DT-09:** limitar tentativas de login antes de qualquer publicação.
+2. **DT-06:** definir com o PO a antecedência máxima da reserva e implementar o
+   check-in (`RESERVADO → OCUPADO`).
+3. **DT-07:** padronizar datas com fuso horário (exige migration).
+4. **DT-04:** testes E2E do frontend (Playwright), cobrindo o roteiro manual.
+5. **DT-02:** refresh token para renovação silenciosa da sessão.

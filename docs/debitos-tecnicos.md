@@ -40,6 +40,27 @@ A equipe reserva **15% do esforço de desenvolvimento de cada sprint/ciclo** exc
 | **DT-04** | **Testes End-to-End (E2E) com Playwright/Cypress** | Atualmente temos testes unitários e de integração no backend, mas o frontend possui apenas testes manuais de QA. | Mudanças na API podem quebrar fluxos do frontend sem detecção prévia no CI. | 🟡 Média | G |
 | **DT-05** | **Isolamento de Scheduler em Worker Dedicado** | O scheduler de expiração de reservas roda na mesma thread da aplicação FastAPI (`APScheduler`). | Em cenários de alta carga na API, o scheduler pode ter atrasos na execução de varreduras. | 🟢 Baixa | M |
 
+### 3.1. Situação dos débitos da N1 após a recepção (N2)
+
+| ID | Situação na N2 | Observação |
+| :--- | :--- | :--- |
+| DT-01 | ✅ **Já estava resolvido** | O código da N1 já usa PostgreSQL (`docker-compose.yml`, CI). O que estava errado era a documentação, corrigida na N2. SQLite é usado apenas nos testes em memória. |
+| DT-02 | 🟡 **Parcialmente tratado** | A N2 trata o token expirado (interceptor de 401 + aviso no login). A renovação silenciosa (refresh token) continua pendente. |
+| DT-03 | ⏳ Pendente | Sem alteração. |
+| DT-04 | ⏳ Pendente | Sem alteração. A N2 incluiu um roteiro de teste manual em `melhorias-n2.md`. |
+| DT-05 | ⏳ Pendente | Sem alteração. Atenção: com mais de um worker do Uvicorn, cada processo sobe seu próprio scheduler. |
+
+### 3.2. Novos débitos identificados na N2
+
+| ID | Título do Débito | Contexto | Impacto | Prioridade | Esforço |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **DT-06** | **Reserva futura bloqueia o armário imediatamente / status `OCUPADO` sem uso** | `criar_reserva` muda o armário para `RESERVADO` na criação, e não há limite de antecedência. Não existe check-in, então `OCUPADO` nunca é atribuído. | Uma reserva para daqui a uma semana prende o armário a semana toda. Depende de decisão do PO (RN03 pendente desde a N1). | 🟠 Alta | M |
+| **DT-07** | **Datas e horas sem fuso horário** | `datetime.now()` e colunas `Date`/`Time` sem timezone. | Com o servidor em UTC, validação de "data no passado" e expiração ficam 3h defasadas para usuários no Brasil. | 🟠 Alta | M |
+| **DT-08** | **Formato de erro diferente do contrato** | A API retorna `{ "detail": "..." }`; o contrato propunha `{ "error": { "code", "message" } }`. | O frontend depende do texto da mensagem, que pode mudar. | 🟡 Média | M |
+| **DT-09** | **Sem limite de tentativas de login** | `/auth/login` e `/auth/register` aceitam requisições ilimitadas. | Permite ataques de força bruta a senhas. | 🔴 Crítica (em produção) | P |
+| **DT-10** | **Expiração usa o mesmo status de conclusão** | O scheduler marca reservas vencidas como `CONCLUIDA`. | Não é possível diferenciar uma reserva usada de uma que venceu (o DER da N1 citava `EXPIRADA`). Exige migration do enum. | 🟢 Baixa | P |
+| **DT-11** | **Promoção de usuário a admin só pelo seed** | Não há tela/endpoint para conceder o papel `admin`. | Criar um segundo admin exige acesso ao banco. | 🟢 Baixa | P |
+
 ---
 
 ## 4. Fluxo de Quitação de Débito Técnico

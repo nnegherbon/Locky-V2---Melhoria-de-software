@@ -32,9 +32,24 @@ docker compose up -d db
 # aplicar migrations
 uv run alembic upgrade head
 
+# criar admin (admin@locky.com / admin123) e 12 armários — idempotente
+uv run python -m app.seed
+
 # rodar a API (http://localhost:8080)
 uv run uvicorn app.main:app --reload --port 8080
 ```
+
+## Variáveis de ambiente
+
+Ver `.env.example`. As principais:
+
+| Variável | Padrão | Observação |
+|---|---|---|
+| `ENV` | `dev` | Com `prod`, a API não sobe se `SECRET_KEY` for a padrão ou tiver menos de 32 bytes |
+| `SECRET_KEY` | chave de desenvolvimento | Assina os tokens JWT |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `120` | Validade do token |
+| `TEMPO_MAXIMO_RESERVA_MINUTOS` | `120` | Duração de uma reserva a partir de data + hora |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@locky.com` / `admin123` | Usados por `python -m app.seed` |
 
 ## Qualidade
 
@@ -63,7 +78,8 @@ uv run pytest tests/integration/test_reservas_concorrencia.py
 ```
 app/
   api/          # routers (endpoints)
-  core/         # config, db, security
+  core/         # config, db, security, scheduler, erros
+  seed.py       # dados iniciais (admin + armários)
   models/       # models SQLAlchemy
   schemas/      # schemas Pydantic (request/response)
   services/     # regras de negócio
