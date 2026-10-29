@@ -16,6 +16,27 @@ def existe_reserva_ativa(session: Session, usuario_id: int) -> bool:
     return reserva is not None
 
 
+def armario_tem_reserva_ativa(session: Session, armario_id: int) -> bool:
+    return (
+        session.scalars(
+            select(Reserva.id).where(
+                Reserva.armario_id == armario_id,
+                Reserva.status == StatusReserva.ATIVA,
+            )
+        ).first()
+        is not None
+    )
+
+
+def armario_tem_reservas(session: Session, armario_id: int) -> bool:
+    return (
+        session.scalars(
+            select(Reserva.id).where(Reserva.armario_id == armario_id)
+        ).first()
+        is not None
+    )
+
+
 def buscar_para_atualizar(session: Session, reserva_id: int) -> Reserva | None:
     return session.execute(
         select(Reserva).where(Reserva.id == reserva_id).with_for_update()

@@ -1,43 +1,73 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { getLockers } from '../services/lockerService'
+import Pagination from '../components/Pagination'
+import { getErrorMessage } from '../services/api'
+import {
+  createLocker,
+  deleteLocker as deleteLockerRequest,
+  getLockers,
+  getLockerStats,
+  updateLocker,
+} from '../services/lockerService'
 import type {
   Locker,
+  LockerAdminStatus,
   LockerSize,
-  LockerStatus,
+  LockerStats,
 } from '../types/locker'
+import { lockerSizeLabel, lockerStatusLabel } from '../utils/labels'
 import './AdminLockers.css'
+
+const TAMANHO_PAGINA = 20
+
+/** Armários reservados/ocupados têm o status controlado pelas reservas. */
+function statusControladoPorReserva(locker: Locker): boolean {
+  return locker.status === 'reserved' || locker.status === 'occupied'
+}
 
 function AdminLockers() {
   const [lockers, setLockers] = useState<Locker[]>([])
+  const [stats, setStats] = useState<LockerStats | null>(null)
+  const [total, setTotal] = useState(0)
+  const [offset, setOffset] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busyId, setBusyId] = useState<number | null>(null)
+
   const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   const [number, setNumber] = useState('')
   const [size, setSize] = useState<LockerSize>('small')
-  const [status, setStatus] = useState<LockerStatus>('available')
+  const [status, setStatus] = useState<LockerAdminStatus>('available')
+
+  // Incrementar `versao` força uma nova busca após criar/editar/excluir.
+  const [versao, setVersao] = useState(0)
+  const recarregar = () => setVersao((atual) => atual + 1)
 
   useEffect(() => {
-    async function loadLockers() {
-      const response = await getLockers()
-      setLockers(response.items)
-    }
+    Promise.all([
+      getLockers({ limit: TAMANHO_PAGINA, offset }),
+      getLockerStats(),
+    ])
+      .then(([lista, resumo]) => {
+        setLockers(lista.items)
+        setTotal(lista.total)
+        setStats(resumo)
+        setError('')
+      })
+      .catch((err) => {
+        setError(getErrorMessage(err, 'Não foi possível carregar os armários.'))
+      })
+      .finally(() => setLoading(false))
+  }, [offset, versao])
 
-    loadLockers()
-  }, [])
-
-  function getSizeLabel(size: LockerSize) {
-    if (size === 'small') return 'Pequeno'
-    if (size === 'medium') return 'Médio'
-    return 'Grande'
-  }
-
-  function getStatusLabel(status: LockerStatus) {
-    if (status === 'available') return 'Disponível'
-    if (status === 'reserved') return 'Reservado'
-    if (status === 'occupied') return 'Ocupado'
-    return 'Manutenção'
+  function irParaPagina(novoOffset: number) {
+    setLoading(true)
+    setOffset(novoOffset)
   }
 
   function openCreateModal() {
@@ -46,6 +76,7 @@ function AdminLockers() {
     setNumber('')
     setSize('small')
     setStatus('available')
+    setFormError('')
     setModalOpen(true)
   }
 
@@ -54,73 +85,86 @@ function AdminLockers() {
     setIsCreating(false)
     setNumber(locker.number)
     setSize(locker.size)
-    setStatus(locker.status)
+    setStatus(locker.status === 'maintenance' ? 'maintenance' : 'available')
+    setFormError('')
     setModalOpen(true)
   }
 
   function closeModal() {
+    if (saving) return
     setModalOpen(false)
     setSelectedLocker(null)
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    if (!number.trim()) return
-
-    if (isCreating) {
-      const newLocker: Locker = {
-        id: Date.now(),
-        number,
-        size,
-        status,
-      }
-
-      setLockers((current) => [...current, newLocker])
-    } else if (selectedLocker) {
-      setLockers((current) =>
-        current.map((locker) =>
-          locker.id === selectedLocker.id
-            ? {
-                ...locker,
-                number,
-                size,
-                status,
-              }
-            : locker,
-        ),
-      )
+    if (!number.trim()) {
+      setFormError('Informe o número do armário.')
+      return
     }
 
-    closeModal()
+    setSaving(true)
+    setFormError('')
+
+    try {
+      if (isCreating) {
+        await createLocker({ number: number.trim(), size, status })
+      } else if (selectedLocker) {
+        await updateLocker(selectedLocker.id, {
+          number: number.trim(),
+          size,
+          // Só envia status quando o admin pode alterá-lo.
+          ...(statusControladoPorReserva(selectedLocker) ? {} : { status }),
+        })
+      }
+      setModalOpen(false)
+      setSelectedLocker(null)
+      recarregar()
+    } catch (err) {
+      setFormError(getErrorMessage(err, 'Não foi possível salvar o armário.'))
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function toggleMaintenance(locker: Locker) {
-    setLockers((current) =>
-      current.map((item) =>
-        item.id === locker.id
-          ? {
-              ...item,
-              status:
-                item.status === 'maintenance'
-                  ? 'available'
-                  : 'maintenance',
-            }
-          : item,
-      ),
-    )
+  async function toggleMaintenance(locker: Locker) {
+    setBusyId(locker.id)
+    try {
+      await updateLocker(locker.id, {
+        status: locker.status === 'maintenance' ? 'available' : 'maintenance',
+      })
+      recarregar()
+    } catch (err) {
+      setError(getErrorMessage(err, 'Não foi possível alterar o status do armário.'))
+    } finally {
+      setBusyId(null)
+    }
   }
 
-  function deleteLocker(locker: Locker) {
+  async function deleteLocker(locker: Locker) {
     const confirmed = window.confirm(
       `Deseja excluir o armário #${locker.number}?`,
     )
 
     if (!confirmed) return
 
-    setLockers((current) =>
-      current.filter((item) => item.id !== locker.id),
-    )
+    setBusyId(locker.id)
+    try {
+      await deleteLockerRequest(locker.id)
+      // Se a página ficou vazia, volta uma página.
+      const novoOffset =
+        lockers.length === 1 && offset > 0 ? offset - TAMANHO_PAGINA : offset
+      if (novoOffset !== offset) {
+        setOffset(novoOffset)
+      } else {
+        recarregar()
+      }
+    } catch (err) {
+      setError(getErrorMessage(err, 'Não foi possível excluir o armário.'))
+    } finally {
+      setBusyId(null)
+    }
   }
 
   return (
@@ -147,42 +191,26 @@ function AdminLockers() {
         <section className="admin-summary-grid">
           <article>
             <span>Total</span>
-            <strong>{lockers.length}</strong>
+            <strong>{stats?.total ?? '—'}</strong>
           </article>
 
           <article>
             <span>Disponíveis</span>
-            <strong>
-              {
-                lockers.filter(
-                  (locker) => locker.status === 'available',
-                ).length
-              }
-            </strong>
+            <strong>{stats?.available ?? '—'}</strong>
           </article>
 
           <article>
             <span>Reservados</span>
-            <strong>
-              {
-                lockers.filter(
-                  (locker) => locker.status === 'reserved',
-                ).length
-              }
-            </strong>
+            <strong>{stats?.reserved ?? '—'}</strong>
           </article>
 
           <article>
             <span>Manutenção</span>
-            <strong>
-              {
-                lockers.filter(
-                  (locker) => locker.status === 'maintenance',
-                ).length
-              }
-            </strong>
+            <strong>{stats?.maintenance ?? '—'}</strong>
           </article>
         </section>
+
+        {error && <p className="api-error">{error}</p>}
 
         <section className="admin-lockers-section">
           <div className="admin-section-header">
@@ -204,19 +232,27 @@ function AdminLockers() {
               </thead>
 
               <tbody>
+                {!loading && lockers.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>
+                      Nenhum armário cadastrado. Use “+ Novo armário” para começar.
+                    </td>
+                  </tr>
+                )}
+
                 {lockers.map((locker) => (
                   <tr key={locker.id}>
                     <td>
                       <strong>#{locker.number}</strong>
                     </td>
 
-                    <td>{getSizeLabel(locker.size)}</td>
+                    <td>{lockerSizeLabel(locker.size)}</td>
 
                     <td>
                       <span
                         className={`admin-status ${locker.status}`}
                       >
-                        {getStatusLabel(locker.status)}
+                        {lockerStatusLabel(locker.status)}
                       </span>
                     </td>
 
@@ -238,6 +274,15 @@ function AdminLockers() {
                               : 'admin-maintenance-button'
                           }
                           onClick={() => toggleMaintenance(locker)}
+                          disabled={
+                            busyId === locker.id ||
+                            statusControladoPorReserva(locker)
+                          }
+                          title={
+                            statusControladoPorReserva(locker)
+                              ? 'Armário com reserva ativa'
+                              : undefined
+                          }
                         >
                           {locker.status === 'maintenance'
                             ? 'Retirar manutenção'
@@ -248,6 +293,7 @@ function AdminLockers() {
                           type="button"
                           className="admin-delete-button"
                           onClick={() => deleteLocker(locker)}
+                          disabled={busyId === locker.id}
                         >
                           Excluir
                         </button>
@@ -258,6 +304,13 @@ function AdminLockers() {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            total={total}
+            limit={TAMANHO_PAGINA}
+            offset={offset}
+            onChangeOffset={irParaPagina}
+          />
         </section>
       </section>
 
@@ -299,6 +352,7 @@ function AdminLockers() {
                 <input
                   id="locker-number"
                   type="text"
+                  maxLength={10}
                   placeholder="Ex: 15"
                   value={number}
                   onChange={(event) =>
@@ -329,29 +383,27 @@ function AdminLockers() {
                 <select
                   id="locker-status"
                   value={status}
+                  disabled={
+                    selectedLocker !== null &&
+                    statusControladoPorReserva(selectedLocker)
+                  }
                   onChange={(event) =>
-                    setStatus(
-                      event.target.value as LockerStatus,
-                    )
+                    setStatus(event.target.value as LockerAdminStatus)
                   }
                 >
-                  <option value="available">
-                    Disponível
-                  </option>
-
-                  <option value="reserved">
-                    Reservado
-                  </option>
-
-                  <option value="occupied">
-                    Ocupado
-                  </option>
-
-                  <option value="maintenance">
-                    Manutenção
-                  </option>
+                  <option value="available">Disponível</option>
+                  <option value="maintenance">Manutenção</option>
                 </select>
+
+                {selectedLocker && statusControladoPorReserva(selectedLocker) && (
+                  <small>
+                    Status atual: {lockerStatusLabel(selectedLocker.status)}. Ele
+                    é controlado pela reserva ativa.
+                  </small>
+                )}
               </div>
+
+              {formError && <p className="api-error">{formError}</p>}
 
               <div className="admin-modal-actions">
                 <button
@@ -365,8 +417,11 @@ function AdminLockers() {
                 <button
                   type="submit"
                   className="admin-save-button"
+                  disabled={saving}
                 >
-                  {isCreating
+                  {saving
+                    ? 'Salvando...'
+                    : isCreating
                     ? 'Cadastrar armário'
                     : 'Salvar alterações'}
                 </button>

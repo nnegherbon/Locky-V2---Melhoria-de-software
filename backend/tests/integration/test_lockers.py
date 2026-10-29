@@ -140,6 +140,7 @@ def test_stats_com_dados(
         "available": 2,
         "reserved": 1,
         "occupied": 1,
+        "maintenance": 1,
     }
 
 
@@ -152,4 +153,5 @@ def test_stats_sem_armarios(client: TestClient, auth_headers: dict[str, str]) ->
         "available": 0,
         "reserved": 0,
         "occupied": 0,
+        "maintenance": 0,
     }

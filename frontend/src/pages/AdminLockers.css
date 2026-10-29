@@ -346,3 +346,25 @@
     grid-template-columns: 1fr;
   }
 }
+.admin-actions button:disabled,
+.admin-save-button:disabled,
+.admin-form-group select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.admin-form-group small {
+  color: #a3a3a3;
+  font-size: 12px;
+}
+
+.admin-locker-form .api-error {
+  margin-bottom: 0;
+}
+
+.admin-lockers-table td[colspan] {
+  padding: 40px 20px;
+  color: #666666;
+  text-align: center;
+}

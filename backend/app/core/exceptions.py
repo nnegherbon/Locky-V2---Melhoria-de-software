@@ -14,6 +14,18 @@ class ArmarioIndisponivelError(Exception):
     """Armário não está com status DISPONIVEL."""
 
 
+class NumeroArmarioDuplicadoError(Exception):
+    """Já existe um armário com o número informado."""
+
+
+class ArmarioComReservaAtivaError(Exception):
+    """Armário possui reserva ATIVA e não pode ter o status alterado/ser excluído."""
+
+
+class ArmarioComHistoricoError(Exception):
+    """Armário já teve reservas; excluí-lo apagaria o histórico dos usuários."""
+
+
 class UsuarioComReservaAtivaError(Exception):
     """Usuário já possui uma reserva com status ATIVA."""
 

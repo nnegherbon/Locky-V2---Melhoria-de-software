@@ -1,5 +1,11 @@
 import { api } from './api'
-import type { Locker, LockerFilters, LockerStats } from '../types/locker'
+import type {
+  CreateLockerPayload,
+  Locker,
+  LockerFilters,
+  LockerStats,
+  UpdateLockerPayload,
+} from '../types/locker'
 
 type LockerListResponse = {
   items: Locker[]
@@ -16,4 +22,18 @@ export async function getLockers(filters: LockerFilters = {}): Promise<LockerLis
 export async function getLockerStats(): Promise<LockerStats> {
   const { data } = await api.get<LockerStats>('/lockers/stats')
   return data
+}
+
+export async function createLocker(payload: CreateLockerPayload): Promise<Locker> {
+  const { data } = await api.post<Locker>('/lockers', payload)
+  return data
+}
+
+export async function updateLocker(id: number, payload: UpdateLockerPayload): Promise<Locker> {
+  const { data } = await api.patch<Locker>(`/lockers/${id}`, payload)
+  return data
+}
+
+export async function deleteLocker(id: number): Promise<void> {
+  await api.delete(`/lockers/${id}`)
 }

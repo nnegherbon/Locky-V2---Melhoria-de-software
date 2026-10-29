@@ -66,3 +66,25 @@ def armario_disponivel(db_session: Session) -> Armario:
     db_session.commit()
     db_session.refresh(registro)
     return registro
+
+
+@pytest.fixture
+def admin(db_session: Session) -> Usuario:
+    registro = Usuario(
+        email="admin@locky.com",
+        senha_hash=hash_senha(SENHA_TESTE),
+        nome="Admin",
+        papel=PapelUsuario.ADMIN,
+    )
+    db_session.add(registro)
+    db_session.commit()
+    db_session.refresh(registro)
+    return registro
+
+
+@pytest.fixture
+def admin_headers(client: TestClient, admin: Usuario) -> dict[str, str]:
+    resposta = client.post(
+        "/auth/login", json={"email": admin.email, "password": SENHA_TESTE}
+    )
+    return {"Authorization": f"Bearer {resposta.json()['access_token']}"}

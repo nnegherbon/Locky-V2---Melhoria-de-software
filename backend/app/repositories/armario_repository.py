@@ -41,3 +41,7 @@ def buscar_para_atualizar(session: Session, armario_id: int) -> Armario | None:
     return session.execute(
         select(Armario).where(Armario.id == armario_id).with_for_update()
     ).scalar_one_or_none()
+
+
+def buscar_por_numero(session: Session, numero: str) -> Armario | None:
+    return session.scalars(select(Armario).where(Armario.numero == numero)).first()

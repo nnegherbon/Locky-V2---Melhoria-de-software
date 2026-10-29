@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_session
 from app.core.exceptions import CredenciaisInvalidasError
 from app.core.security import decodificar_token
-from app.models import Usuario
+from app.models import PapelUsuario, Usuario
 from app.repositories import usuario_repository
 
 seguranca = HTTPBearer(auto_error=False)
@@ -36,4 +36,16 @@ def get_current_user(
     usuario = usuario_repository.buscar_por_id(session, usuario_id)
     if usuario is None:
         raise _nao_autenticado()
+    return usuario
+
+
+def require_admin(
+    usuario: Annotated[Usuario, Depends(get_current_user)],
+) -> Usuario:
+    """Autorização no servidor: esconder o menu no frontend não protege a API."""
+    if usuario.papel != PapelUsuario.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores.",
+        )
     return usuario
