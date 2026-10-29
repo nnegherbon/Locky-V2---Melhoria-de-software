@@ -37,7 +37,7 @@ está em beta.
 
 ## Passo 1 · Projeto da API (`locky-api`)
 
-1. No Vercel: **Add New → Project** → importe `mari-catolicasc/locky`.
+1. No Vercel: **Add New → Project** → importe `nnegherbon/Locky-V2---Melhoria-de-software`.
 2. **Project Name:** `locky-api`.
 3. **Root Directory:** clique em *Edit* e escolha **`backend`**.
 4. **Framework Preset:** deve aparecer **FastAPI** (detectado pelo `pyproject.toml`, que

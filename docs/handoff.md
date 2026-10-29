@@ -3,7 +3,8 @@
 ## 1. Identificação
 
 - **Projeto**: Locky (Sistema de Gestão e Reserva de Armários de Academia)
-- **Repositório**: [github.com/mari-catolicasc/locky](https://github.com/mari-catolicasc/locky)
+- **Repositório (N2)**: [github.com/nnegherbon/Locky-V2---Melhoria-de-software](https://github.com/nnegherbon/Locky-V2---Melhoria-de-software)
+- **Repositório de origem (N1)**: [github.com/mari-catolicasc/locky](https://github.com/mari-catolicasc/locky). O histórico de commits da N1 foi preservado no repositório da N2
 - **Versão entregue**: `v2.0` (N2) · versão anterior: `1.0.0` (N1)
 
 | Fase | Equipe | PO |
