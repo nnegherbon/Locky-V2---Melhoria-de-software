@@ -26,8 +26,14 @@ function Register() {
       return
     }
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres.')
+    if (name.trim().length < 2) {
+      setError('Informe seu nome (mínimo de 2 caracteres).')
+      return
+    }
+
+    // Mesmos limites do backend (o bcrypt considera no máximo 72 caracteres).
+    if (password.length < 6 || password.length > 72) {
+      setError('A senha deve ter entre 6 e 72 caracteres.')
       return
     }
 
