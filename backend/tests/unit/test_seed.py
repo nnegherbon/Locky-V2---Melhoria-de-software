@@ -1,9 +1,10 @@
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.security import verificar_senha
 from app.models import Armario, PapelUsuario, StatusArmario, Usuario
-from app.seed import ARMARIOS_INICIAIS, popular
+from app.seed import ARMARIOS_INICIAIS, popular, validar_senha_admin
 
 
 def test_seed_cria_admin_e_armarios(db_session: Session) -> None:
@@ -38,3 +39,21 @@ def test_seed_completa_armarios_faltantes(db_session: Session) -> None:
     resultado = popular(db_session, "admin@locky.com", "admin123")
 
     assert resultado.armarios_criados == 11
+
+
+def test_senha_padrao_aceita_fora_de_producao() -> None:
+    validar_senha_admin("dev", "admin123")
+
+
+def test_producao_recusa_senha_padrao() -> None:
+    with pytest.raises(ValueError, match="senha padrão"):
+        validar_senha_admin("prod", "admin123")
+
+
+def test_producao_recusa_senha_curta() -> None:
+    with pytest.raises(ValueError, match="pelo menos 10"):
+        validar_senha_admin("prod", "curta123")
+
+
+def test_producao_aceita_senha_forte() -> None:
+    validar_senha_admin("prod", "uma-senha-bem-longa")

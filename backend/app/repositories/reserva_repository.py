@@ -38,17 +38,21 @@ def armario_tem_reservas(session: Session, armario_id: int) -> bool:
 
 
 def buscar_para_atualizar(session: Session, reserva_id: int) -> Reserva | None:
+    # populate_existing: se a reserva já estava carregada na sessão, recarrega os
+    # valores do banco depois de obter o lock (outra transação pode tê-la mudado).
     return session.execute(
-        select(Reserva).where(Reserva.id == reserva_id).with_for_update()
+        select(Reserva)
+        .where(Reserva.id == reserva_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     ).scalar_one_or_none()
 
 
-def listar_ativas_para_atualizar(session: Session) -> list[Reserva]:
+def listar_ativas(session: Session) -> list[Reserva]:
+    """Leitura sem lock: usada para achar candidatas a expirar."""
     return list(
         session.scalars(
-            select(Reserva)
-            .where(Reserva.status == StatusReserva.ATIVA)
-            .with_for_update()
+            select(Reserva).where(Reserva.status == StatusReserva.ATIVA)
         ).all()
     )
 

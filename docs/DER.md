@@ -81,7 +81,7 @@ Os enums são gravados no PostgreSQL como tipos `ENUM` com o **nome** do membro
 | `usuario_id` | Integer | FK `usuarios.id`, Index | Dono da reserva. |
 | `armario_id` | Integer | FK `armarios.id`, Index | Armário reservado. |
 | `data` | Date | Not Null | Dia de início da reserva. |
-| `hora` | Time | Not Null | Hora de início. A reserva vence em `data + hora + TEMPO_MAXIMO_RESERVA_MINUTOS`. |
+| `hora` | Time | Not Null | Hora de início, no fuso `FUSO_HORARIO` (padrão `America/Sao_Paulo`). A reserva vence em `data + hora + TEMPO_MAXIMO_RESERVA_MINUTOS`. |
 | `status` | Enum `statusreserva` | Not Null, default `ATIVA` | `ATIVA`, `CONCLUIDA` ou `CANCELADA`. |
 | `criado_em` | DateTime | Not Null, default `now()` | Criação. |
 | `atualizado_em` | DateTime | Not Null, default `now()`, atualiza no update | Última alteração. |
@@ -115,7 +115,9 @@ Registrado como débito técnico DT-06.
 ```
 ATIVA ──cancelamento pelo dono──▶ CANCELADA
   │
-  └──scheduler (a cada EXPIRACAO_INTERVALO_MINUTOS) ao vencer──▶ CONCLUIDA
+  └──ao vencer──▶ CONCLUIDA
+       (scheduler a cada EXPIRACAO_INTERVALO_MINUTOS e, em todo ambiente,
+        no início das requisições de armários/reservas)
 ```
 
 ## 5. Regras de integridade

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import expirar_vencidas, get_current_user
 from app.core.db import get_session
 from app.core.exceptions import (
     ArmarioIndisponivelError,
@@ -23,7 +23,11 @@ from app.schemas.reservation import (
 )
 from app.services import reservation_service
 
-router = APIRouter(prefix="/reservations", tags=["reservations"])
+router = APIRouter(
+    prefix="/reservations",
+    tags=["reservations"],
+    dependencies=[Depends(expirar_vencidas)],
+)
 
 
 @router.post(

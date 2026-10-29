@@ -16,9 +16,14 @@ from app.core.scheduler import iniciar_scheduler, parar_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    iniciar_scheduler()
+    # Em serverless (Vercel) não há processo contínuo: a expiração acontece sob
+    # demanda, nas próprias requisições (ver api/deps.py::expirar_vencidas).
+    rodar = settings.executar_scheduler
+    if rodar:
+        iniciar_scheduler()
     yield
-    parar_scheduler()
+    if rodar:
+        parar_scheduler()
 
 
 def create_app() -> FastAPI:
@@ -27,6 +32,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
+        allow_origin_regex=settings.cors_origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

@@ -10,7 +10,8 @@ liberadas automaticamente.
 | **Versão atual** | `v2.0` (N2) — [o que mudou](docs/melhorias-n2.md) |
 | **Backend** | Python 3.12 · FastAPI · SQLAlchemy 2 · Alembic · PostgreSQL 16 · JWT |
 | **Frontend** | React 19 · TypeScript · Vite · React Router · Axios |
-| **Qualidade** | pytest (108 testes, cobertura 100%) · ruff · mypy strict · ESLint · GitHub Actions |
+| **Publicação** | Vercel (frontend + API serverless) + Neon PostgreSQL — [guia de deploy](docs/deploy-vercel.md) |
+| **Qualidade** | pytest (124 testes, cobertura 100%) · ruff · mypy strict · ESLint · GitHub Actions |
 
 ---
 
@@ -64,8 +65,8 @@ npm run dev
 | Administrador | `admin@locky.com` / `admin123`, criado pelo seed (mude em `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`) |
 | Associado | Tela **Criar conta** (`/register`) |
 
-> **Produção:** defina `ENV=prod` e uma `SECRET_KEY` própria com pelo menos 32 bytes.
-> A API se recusa a subir com a chave padrão.
+> **Produção:** siga [`docs/deploy-vercel.md`](docs/deploy-vercel.md). Com `ENV=prod`, a API
+> recusa a `SECRET_KEY` padrão e o seed recusa a senha padrão do admin.
 
 ---
 
@@ -99,6 +100,7 @@ Roteiro de teste manual (QA): seção 5 de [`docs/melhorias-n2.md`](docs/melhori
 | [`debitos-tecnicos.md`](docs/debitos-tecnicos.md) | Política, inventário N1 e novos débitos da N2 (DT-06 a DT-11) |
 | [`handoff.md`](docs/handoff.md) | Parecer de recepção, arquitetura, execução, endpoints e recomendações |
 | [`melhorias-n2.md`](docs/melhorias-n2.md) | Diagnóstico, decisões técnicas e justificativas das mudanças da N2 |
+| [`deploy-vercel.md`](docs/deploy-vercel.md) | Passo a passo do deploy no Vercel + Neon e solução de problemas |
 | [`api/openapi.json`](docs/api/openapi.json) | Contrato OpenAPI 3 (importar no Postman: *Import → File*) |
 | [`regras-negocio-contrato-api.md`](docs/regras-negocio-contrato-api.md) | Regras de negócio e contrato proposto na N1 |
 | [`Acordo de Manutenibilidade`](docs/Acordo%20de%20Manutenibilidade%20e%20Engenharia%20de%20So.docx) | Combinados de engenharia da equipe |
@@ -122,7 +124,7 @@ exclusividade sobre a área.
 | [nome] | Desenvolvedor(a) Frontend | Tela de cadastro integrada, tela de administração integrada, tratamento de sessão expirada | Commits `N2-01`, `N2-02`, `N2-03` |
 | [nome] | Quality Assurance (QA) | Roteiro de teste manual, validação dos 12 cenários, revisão dos testes automatizados | Seção 5 de `melhorias-n2.md` |
 | [nome] | Engenheiro(a) de Requisitos | Revisão das regras de negócio e do DER contra o código real | [`DER.md`](docs/DER.md), [`debitos-tecnicos.md`](docs/debitos-tecnicos.md) |
-| [nome] | DevOps | Branches e PRs, CI, tag `v2.0` e release | Release `v2.0`, `.github/workflows/` |
+| [nome] | DevOps | Branches e PRs, CI, deploy no Vercel + Neon, workflow de migrations, tag `v2.0` | Release `v2.0`, `docs/deploy-vercel.md`, `.github/workflows/` |
 
 ### N1 — Equipe de origem (Cartel / Locky Team)
 

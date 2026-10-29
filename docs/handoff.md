@@ -11,6 +11,10 @@
 | N1 (origem) | Cartel / Locky Team | Leonardo Lima |
 | N2 (receptora) | **[nome da equipe]** | **[nome do PO]** |
 
+**Sistema publicado:** [https://locky-web.vercel.app](https://locky-web.vercel.app) ·
+API: [https://locky-api.vercel.app/docs](https://locky-api.vercel.app/docs) *(ajustar se os
+domínios forem outros)*
+
 A matriz de papéis e o histórico de contribuições de cada fase estão no
 [README](../README.md).
 
@@ -43,7 +47,8 @@ Backend (FastAPI, Python 3.12)                   :8080
    → services/ (regras de negócio)
    → repositories/ (consultas SQLAlchemy)
    → models/ (ORM)
-  core/scheduler.py: APScheduler expira reservas vencidas
+  core/scheduler.py: APScheduler expira reservas vencidas (desligado no Vercel;
+                     lá a expiração ocorre sob demanda em api/deps.py)
                     │
                     ▼
 PostgreSQL 16 (docker compose)                   :5432 (dev) / :5433 (testes)
@@ -77,8 +82,8 @@ npm run dev                        # http://localhost:5173
 `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD`). Contas de associado são criadas pela tela
 de cadastro.
 
-**Produção:** defina `ENV=prod` e uma `SECRET_KEY` própria com 32+ bytes. A API se
-recusa a subir com a chave padrão.
+**Produção (Vercel + Neon):** passo a passo em [`deploy-vercel.md`](deploy-vercel.md).
+Migrations e seed de produção rodam pelo workflow manual *Migrations de produção*.
 
 ---
 
@@ -113,8 +118,9 @@ Erros seguem o formato `{ "detail": "mensagem" }` com 401 (não autenticado),
 
 - **CI (GitHub Actions):** backend roda `ruff check`, `ruff format --check`,
   `mypy --strict`, migrations e `pytest` com **cobertura mínima de 100%**; frontend
-  roda `eslint` e `tsc + vite build`.
-- **Testes locais:** `cd backend && uv run pytest` (108 testes). O teste de
+  roda `eslint` e `tsc + vite build`. O workflow manual `migrate-producao.yml` aplica
+  migrations e seed no banco de produção.
+- **Testes locais:** `cd backend && uv run pytest` (124 testes). O teste de
   concorrência precisa de `docker compose up -d db_test`; sem ele, é pulado.
 - **Roteiro manual de QA:** seção 5 de [`melhorias-n2.md`](melhorias-n2.md).
 

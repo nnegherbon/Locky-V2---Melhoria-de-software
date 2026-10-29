@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.clock import agora_local
 from app.core.config import settings
 from app.core.exceptions import (
     ArmarioIndisponivelError,
@@ -110,12 +111,26 @@ def _esta_vencida(reserva: Reserva, agora: datetime) -> bool:
 
 
 def expirar_reservas_vencidas(session: Session, agora: datetime | None = None) -> int:
-    momento = agora if agora is not None else datetime.now()
-    total_expiradas = 0
+    """Conclui reservas vencidas e libera seus armários.
 
-    for reserva in reserva_repository.listar_ativas_para_atualizar(session):
-        if not _esta_vencida(reserva, momento):
-            continue
+    Chamada pelo scheduler (servidor tradicional) e no início das requisições de
+    armários/reservas (serverless). Por rodar com frequência, só trava as linhas
+    que realmente venceram, em vez de travar todas as reservas ativas.
+    """
+    momento = agora if agora is not None else agora_local()
+    vencidas = [
+        reserva.id
+        for reserva in reserva_repository.listar_ativas(session)
+        if _esta_vencida(reserva, momento)
+    ]
+    if not vencidas:
+        return 0
+
+    total_expiradas = 0
+    for reserva_id in vencidas:
+        reserva = reserva_repository.buscar_para_atualizar(session, reserva_id)
+        if reserva is None or reserva.status != StatusReserva.ATIVA:
+            continue  # outra requisição concorrente já tratou esta reserva
 
         armario = armario_repository.buscar_para_atualizar(session, reserva.armario_id)
         if (

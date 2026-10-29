@@ -55,7 +55,7 @@ def _seed_historico(db_session: Session, usuario_id: int) -> None:
         Reserva(
             usuario_id=usuario_id,
             armario_id=armarios[0].id,
-            data=date(2026, 9, 5),
+            data=date(2099, 9, 5),  # futura: segue ATIVA com a expiração sob demanda
             hora=time(9, 0),
             status=StatusReserva.ATIVA,
         ),

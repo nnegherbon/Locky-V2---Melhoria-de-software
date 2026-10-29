@@ -15,7 +15,12 @@ dependencies = [
     "bcrypt>=4.1",
     "email-validator>=2.2",
     "apscheduler>=3.11",
+    "tzdata>=2024.1",
 ]
+
+# Deploy no Vercel (projeto com Root Directory = backend)
+[tool.vercel]
+entrypoint = "app.main:app"
 
 [dependency-groups]
 dev = [

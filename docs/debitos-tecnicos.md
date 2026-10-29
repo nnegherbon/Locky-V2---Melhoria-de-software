@@ -48,14 +48,14 @@ A equipe reserva **15% do esforço de desenvolvimento de cada sprint/ciclo** exc
 | DT-02 | 🟡 **Parcialmente tratado** | A N2 trata o token expirado (interceptor de 401 + aviso no login). A renovação silenciosa (refresh token) continua pendente. |
 | DT-03 | ⏳ Pendente | Sem alteração. |
 | DT-04 | ⏳ Pendente | Sem alteração. A N2 incluiu um roteiro de teste manual em `melhorias-n2.md`. |
-| DT-05 | ⏳ Pendente | Sem alteração. Atenção: com mais de um worker do Uvicorn, cada processo sobe seu próprio scheduler. |
+| DT-05 | 🟡 **Contornado no Vercel** | Em serverless o scheduler fica desligado e a expiração ocorre sob demanda (início de cada requisição de armários/reservas). Em servidor tradicional, com mais de um worker do Uvicorn, cada processo ainda sobe seu próprio scheduler. |
 
 ### 3.2. Novos débitos identificados na N2
 
 | ID | Título do Débito | Contexto | Impacto | Prioridade | Esforço |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **DT-06** | **Reserva futura bloqueia o armário imediatamente / status `OCUPADO` sem uso** | `criar_reserva` muda o armário para `RESERVADO` na criação, e não há limite de antecedência. Não existe check-in, então `OCUPADO` nunca é atribuído. | Uma reserva para daqui a uma semana prende o armário a semana toda. Depende de decisão do PO (RN03 pendente desde a N1). | 🟠 Alta | M |
-| **DT-07** | **Datas e horas sem fuso horário** | `datetime.now()` e colunas `Date`/`Time` sem timezone. | Com o servidor em UTC, validação de "data no passado" e expiração ficam 3h defasadas para usuários no Brasil. | 🟠 Alta | M |
+| **DT-07** | **Datas e horas sem fuso horário no banco** | ✅ *Mitigado na N2 (N2-06):* "agora" passou a ser calculado em `FUSO_HORARIO`, o que corrige o deploy em servidores UTC. Resta: as colunas continuam sem timezone, o que assume uma academia em um único fuso. | Uma rede com unidades em fusos diferentes exigiria `timestamptz` e migration. | 🟢 Baixa | M |
 | **DT-08** | **Formato de erro diferente do contrato** | A API retorna `{ "detail": "..." }`; o contrato propunha `{ "error": { "code", "message" } }`. | O frontend depende do texto da mensagem, que pode mudar. | 🟡 Média | M |
 | **DT-09** | **Sem limite de tentativas de login** | `/auth/login` e `/auth/register` aceitam requisições ilimitadas. | Permite ataques de força bruta a senhas. | 🔴 Crítica (em produção) | P |
 | **DT-10** | **Expiração usa o mesmo status de conclusão** | O scheduler marca reservas vencidas como `CONCLUIDA`. | Não é possível diferenciar uma reserva usada de uma que venceu (o DER da N1 citava `EXPIRADA`). Exige migration do enum. | 🟢 Baixa | P |

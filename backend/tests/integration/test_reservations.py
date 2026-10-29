@@ -1,10 +1,11 @@
-from datetime import date, datetime, time, timedelta
+from datetime import date, time, timedelta
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.core.clock import agora_local
 from app.core.exceptions import UsuarioComReservaAtivaError
 from app.core.security import hash_senha
 from app.models import (
@@ -118,7 +119,7 @@ def test_criar_reserva_data_passada(
 def test_criar_reserva_hoje_com_horario_ja_passado(
     client: TestClient, armario_disponivel: Armario, auth_headers: dict[str, str]
 ) -> None:
-    uma_hora_atras = datetime.now() - timedelta(hours=1)
+    uma_hora_atras = agora_local() - timedelta(hours=1)
     payload = {
         "locker_id": armario_disponivel.id,
         "date": uma_hora_atras.date().isoformat(),

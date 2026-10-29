@@ -31,6 +31,29 @@ ARMARIOS_INICIAIS: list[tuple[str, TamanhoArmario]] = [
 ]
 
 
+SENHA_ADMIN_PADRAO = "admin123"
+SENHA_ADMIN_TAMANHO_MINIMO_PROD = 10
+
+
+def validar_senha_admin(env: str, senha: str) -> None:
+    """Em produção a senha do admin precisa ser definida e forte.
+
+    Com a senha padrão, qualquer pessoa que leia o README entraria como admin
+    no sistema publicado.
+    """
+    if env != "prod":
+        return
+    if senha == SENHA_ADMIN_PADRAO:
+        raise ValueError(
+            "Defina SEED_ADMIN_PASSWORD: a senha padrão não é aceita em produção."
+        )
+    if len(senha) < SENHA_ADMIN_TAMANHO_MINIMO_PROD:
+        raise ValueError(
+            "SEED_ADMIN_PASSWORD deve ter pelo menos "
+            f"{SENHA_ADMIN_TAMANHO_MINIMO_PROD} caracteres em produção."
+        )
+
+
 @dataclass(frozen=True)
 class ResultadoSeed:
     admin_criado: bool
@@ -67,6 +90,11 @@ def main() -> None:  # pragma: no cover - ponto de entrada de linha de comando
     from app.core.logging_config import configurar_logging
 
     configurar_logging()
+    try:
+        validar_senha_admin(settings.env, settings.seed_admin_password)
+    except ValueError as exc:
+        raise SystemExit(f"Seed cancelado: {exc}") from exc
+
     with SessionLocal() as session:
         resultado = popular(
             session, settings.seed_admin_email, settings.seed_admin_password

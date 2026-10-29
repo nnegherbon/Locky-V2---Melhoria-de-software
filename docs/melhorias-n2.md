@@ -33,8 +33,9 @@ herdada é boa, e os problemas estavam concentrados nas bordas do sistema.
 | P8 | 🟡 Média | Reserva futura bloqueia o armário desde a criação; sem limite de antecedência. | `reservation_service.criar_reserva` |
 | P9 | 🟡 Média | `datetime.now()` sem fuso: com o servidor em UTC, as regras de horário ficam 3h defasadas para usuários no Brasil. | `schemas/reservation.py`, `reservation_service.py` |
 
-P8 e P9 dependem de decisão de produto ou de migration e foram **registrados como
-débito técnico** (ver `debitos-tecnicos.md`) em vez de corrigidos às pressas.
+P8 depende de decisão de produto e foi **registrado como débito técnico** (ver
+`debitos-tecnicos.md`). P9 começou como débito, mas virou correção obrigatória ao
+preparar o deploy no Vercel, cujos servidores ficam em UTC (ver N2-06).
 
 ---
 
@@ -79,6 +80,17 @@ do projeto (`ID - descrição`).
 README, DER, handoff e débitos técnicos foram reescritos a partir do código real;
 o contrato OpenAPI foi exportado para `docs/api/openapi.json` (importável no Postman).
 
+### N2-06 · Preparação para deploy no Vercel (adaptativa) · P9
+
+| | |
+| :--- | :--- |
+| **Problema** | O projeto só rodava localmente. No Vercel não existe processo contínuo (o scheduler não roda e o cron gratuito é diário), os servidores ficam em UTC, o provedor do banco entrega a URL em outro formato e o site publicado não sabia o endereço da API. |
+| **Solução** | Expiração de reservas **sob demanda** (dependência executada no início das requisições de armários e reservas); "agora" calculado no fuso da academia (`FUSO_HORARIO`); conversão automática de `postgresql://` para o driver psycopg 3; `NullPool` em serverless; scheduler desligado quando `VERCEL=1`; CORS por lista e por regex (previews); `frontend/vercel.json` com fallback de rotas da SPA; build falha se faltar `VITE_API_URL`; seed recusa senha padrão em produção; workflow manual de migrations de produção. |
+| **Decisões técnicas** | *Dois projetos Vercel* (um por pasta), cada um com o preset oficial estável, em vez do recurso Services, ainda em beta. *Expiração sob demanda* em vez de cron, porque o plano gratuito só permite cron diário e porque assim nenhum usuário vê um armário vencido como reservado. A varredura passou a travar **só as reservas vencidas**, não todas as ativas, por rodar a cada requisição. Corrida entre duas requisições é resolvida com `FOR UPDATE` + `populate_existing` e reconferência do status. Falha na expiração é registrada em log e **não derruba** a requisição principal. *Migrations via GitHub Actions* com a URL direta (sem pool), porque o Vercel não executa comandos de banco. |
+| **Benefício** | Sistema publicável no plano gratuito, com as mesmas regras de negócio do ambiente local. |
+| **Arquivos** | `core/config.py`, `core/clock.py`, `core/db.py`, `api/deps.py`, `api/lockers.py`, `api/reservations.py`, `main.py`, `services/reservation_service.py`, `repositories/*.py`, `schemas/reservation.py`, `seed.py`, `pyproject.toml`, `backend/.vercelignore`, `frontend/vercel.json`, `frontend/vite.config.ts`, `.github/workflows/migrate-producao.yml`, `docs/deploy-vercel.md` |
+| **Testes** | `test_expiracao_sob_demanda.py` (5), `test_clock.py` (2), `test_config.py` (+5), `test_seed.py` (+4); suíte inteira executada com `TZ=UTC` para simular o Vercel |
+
 ---
 
 ## 3. Classificação das manutenções
@@ -88,7 +100,7 @@ o contrato OpenAPI foi exportado para `docs/api/openapi.json` (importável no Po
 | **Corretiva** | N2-01 (cadastro inexistente, senha no console), N2-03 (sessão expirada), N2-04 (docs incorretas) |
 | **Evolutiva / Perfectiva** | N2-02 (módulo administrativo) |
 | **Preventiva** | N2-03 (chave JWT), dívida registrada DT-06 a DT-11 |
-| **Adaptativa** | `ENV` e validação de configuração para ambientes de produção |
+| **Adaptativa** | N2-06 (deploy serverless no Vercel, fuso horário, URL do provedor), `ENV` e validação de configuração |
 
 ---
 
@@ -96,19 +108,22 @@ o contrato OpenAPI foi exportado para `docs/api/openapi.json` (importável no Po
 
 | Indicador | N1 (herdado) | N2 (entregue) |
 | :--- | :--- | :--- |
-| Testes automatizados (backend) | 68 | 108 |
+| Testes automatizados (backend) | 68 | 124 |
 | Cobertura de linhas e ramos | 100% | 100% |
 | Avisos na suíte de testes | 126 | 2 |
 | Endpoints | 9 | 13 |
 | Endpoints com autorização por papel | 0 | 3 |
 | Telas com dados simulados | 2 (Cadastro, Admin) | 0 |
 | Instalação do zero consegue fazer login | Não | Sim (`app.seed`) |
+| Publicável na nuvem | Não | Sim (Vercel + Neon, [guia](deploy-vercel.md)) |
 
 ---
 
 ## 5. Roteiro de teste manual (QA)
 
-Executar com o banco vazio, após `alembic upgrade head` e `python -m app.seed`.
+Executar com o banco vazio, após `alembic upgrade head` e `python -m app.seed`
+(localmente) ou após o workflow *Migrations de produção* (no site publicado; use o
+admin definido nos segredos em vez de `admin123`).
 
 | # | Passos | Resultado esperado |
 | :--- | :--- | :--- |

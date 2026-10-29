@@ -1,0 +1,59 @@
+name: Migrations de produção
+
+# Execução manual: Actions → "Migrations de produção" → Run workflow.
+# Rodar após o primeiro deploy e sempre que uma nova migration for mesclada.
+# O Vercel não executa migrations: as funções serverless só atendem requisições.
+
+on:
+  workflow_dispatch:
+    inputs:
+      executar_seed:
+        description: "Criar admin e armários iniciais (idempotente)"
+        type: boolean
+        default: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    environment: producao
+    env:
+      ENV: prod
+      DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      SECRET_KEY: ${{ secrets.PRODUCTION_SECRET_KEY }}
+      SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
+      SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar segredos
+        run: |
+          faltando=""
+          [ -z "$DATABASE_URL" ] && faltando="$faltando PRODUCTION_DATABASE_URL"
+          [ -z "$SECRET_KEY" ] && faltando="$faltando PRODUCTION_SECRET_KEY"
+          if [ "${{ inputs.executar_seed }}" = "true" ]; then
+            [ -z "$SEED_ADMIN_EMAIL" ] && faltando="$faltando SEED_ADMIN_EMAIL"
+            [ -z "$SEED_ADMIN_PASSWORD" ] && faltando="$faltando SEED_ADMIN_PASSWORD"
+          fi
+          if [ -n "$faltando" ]; then
+            echo "::error::Segredos não configurados no environment 'producao':$faltando"
+            exit 1
+          fi
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sincronizar dependências
+        run: uv sync --no-dev
+
+      - name: Aplicar migrations
+        run: uv run --no-dev alembic upgrade head
+
+      - name: Seed (admin + armários)
+        if: ${{ inputs.executar_seed }}
+        run: uv run --no-dev python -m app.seed

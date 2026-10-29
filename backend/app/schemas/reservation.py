@@ -6,6 +6,7 @@ from typing import Self
 
 from pydantic import BaseModel, model_validator
 
+from app.core.clock import agora_local
 from app.models import Armario, Reserva, StatusReserva
 from app.schemas.locker import TAMANHO_DOMINIO_PARA_API, LockerSizeAPI
 
@@ -32,7 +33,7 @@ class CreateReservationRequest(BaseModel):
     @model_validator(mode="after")
     def data_hora_nao_pode_estar_no_passado(self) -> Self:
         momento_reserva = datetime.combine(self.date, self.time)
-        if momento_reserva < datetime.now():
+        if momento_reserva < agora_local():
             raise ValueError("A data e hora da reserva não podem estar no passado.")
         return self
 

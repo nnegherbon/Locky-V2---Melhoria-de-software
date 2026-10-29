@@ -49,7 +49,13 @@ Ver `.env.example`. As principais:
 | `SECRET_KEY` | chave de desenvolvimento | Assina os tokens JWT |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `120` | Validade do token |
 | `TEMPO_MAXIMO_RESERVA_MINUTOS` | `120` | Duração de uma reserva a partir de data + hora |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@locky.com` / `admin123` | Usados por `python -m app.seed` |
+| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@locky.com` / `admin123` | Usados por `python -m app.seed`; com `ENV=prod` a senha padrão é recusada |
+| `DATABASE_URL` | Postgres local | Aceita `postgresql://` dos provedores (convertida para psycopg 3) |
+| `FUSO_HORARIO` | `America/Sao_Paulo` | Fuso em que data/hora das reservas são interpretadas |
+| `CORS_ORIGINS` / `CORS_ORIGIN_REGEX` | `localhost:5173` / vazio | Origens do frontend; o regex libera previews do Vercel |
+| `SCHEDULER_HABILITADO` | `true` | Desligado automaticamente no Vercel (`VERCEL=1`) |
+
+Deploy no Vercel: [`../docs/deploy-vercel.md`](../docs/deploy-vercel.md).
 
 ## Qualidade
 

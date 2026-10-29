@@ -3,8 +3,9 @@ import { clearToken, getToken } from './tokenStorage'
 
 // Fallback garante que o projeto funcione mesmo sem o .env copiado.
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:8080',
-  timeout: 10000,
+  baseURL: (import.meta.env.VITE_API_URL ?? 'http://localhost:8080').replace(/\/+$/, ''),
+  // Folga para o "cold start" das funções serverless na primeira requisição.
+  timeout: 20000,
 })
 
 api.interceptors.request.use((config) => {

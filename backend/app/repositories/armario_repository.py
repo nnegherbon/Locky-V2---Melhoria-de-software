@@ -39,7 +39,10 @@ def contar_por_status(session: Session) -> dict[StatusArmario, int]:
 
 def buscar_para_atualizar(session: Session, armario_id: int) -> Armario | None:
     return session.execute(
-        select(Armario).where(Armario.id == armario_id).with_for_update()
+        select(Armario)
+        .where(Armario.id == armario_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
     ).scalar_one_or_none()
 
 

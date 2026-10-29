@@ -1,7 +1,9 @@
+import logging
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.db import get_session
@@ -9,6 +11,9 @@ from app.core.exceptions import CredenciaisInvalidasError
 from app.core.security import decodificar_token
 from app.models import PapelUsuario, Usuario
 from app.repositories import usuario_repository
+from app.services.reservation_service import expirar_reservas_vencidas
+
+logger = logging.getLogger(__name__)
 
 seguranca = HTTPBearer(auto_error=False)
 
@@ -49,3 +54,17 @@ def require_admin(
             detail="Acesso restrito a administradores.",
         )
     return usuario
+
+
+def expirar_vencidas(session: Annotated[Session, Depends(get_session)]) -> None:
+    """Garante que a requisição veja o estado atualizado dos armários.
+
+    Em serverless não há scheduler; mesmo com ele, a varredura roda a cada N
+    minutos e um armário vencido apareceria como reservado nesse intervalo.
+    Uma falha aqui não deve impedir a requisição principal.
+    """
+    try:
+        expirar_reservas_vencidas(session)
+    except SQLAlchemyError:
+        session.rollback()
+        logger.exception("Falha ao expirar reservas vencidas sob demanda")

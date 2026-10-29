@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import expirar_vencidas, get_current_user, require_admin
 from app.core.db import get_session
 from app.core.exceptions import (
     ArmarioComHistoricoError,
@@ -23,7 +23,9 @@ from app.schemas.locker import (
 from app.services import locker_service
 
 router = APIRouter(
-    prefix="/lockers", tags=["lockers"], dependencies=[Depends(get_current_user)]
+    prefix="/lockers",
+    tags=["lockers"],
+    dependencies=[Depends(get_current_user), Depends(expirar_vencidas)],
 )
 
 
